@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FlowCue — 텔레프롬프터</title>
+  <style>
+    :root { --bg:#080a0f; --panel:#11141c; --line:#262b38; --text:#f4f5f7; --muted:#9097a6; --accent:#b8ff5c; --accent2:#74e7ff; }
+    * { box-sizing:border-box; }
+    html, body { height:100%; margin:0; }
+    body { overflow:hidden; background:var(--bg); color:var(--text); font-family:Inter, Pretendard, "Noto Sans KR", system-ui, sans-serif; }
+    button, input, textarea { font:inherit; }
+    button { color:inherit; }
+    .app { height:100%; display:grid; grid-template-rows:auto 1fr; }
+    header { height:70px; display:flex; align-items:center; gap:18px; padding:0 22px; background:rgba(8,10,15,.92); border-bottom:1px solid var(--line); z-index:10; backdrop-filter:blur(18px); }
+    .brand { display:flex; align-items:center; gap:10px; margin-right:auto; font-weight:800; letter-spacing:-.04em; }
+    .mark { width:32px; height:32px; display:grid; place-items:center; border-radius:10px; background:var(--accent); color:#10130a; font-size:18px; }
+    .group { display:flex; align-items:center; gap:9px; }
+    .label { flex:none; color:var(--muted); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
+    input[type=range] { width:96px; accent-color:var(--accent); }
+    .number-input { width:54px; padding:7px 5px; border:1px solid var(--line); border-radius:8px; outline:0; background:#0d1017; color:var(--text); text-align:center; font-size:12px; font-variant-numeric:tabular-nums; }
+    .number-input:focus { border-color:var(--accent); box-shadow:0 0 0 2px rgba(184,255,92,.12); }
+    .btn { border:1px solid var(--line); background:#171b25; border-radius:11px; padding:10px 13px; cursor:pointer; transition:.18s ease; white-space:nowrap; }
+    .btn:hover { border-color:#3d4558; transform:translateY(-1px); }
+    .btn.primary { border-color:var(--accent); background:var(--accent); color:#11150b; font-weight:800; min-width:92px; }
+    .btn.active { color:var(--accent); border-color:#607c42; }
+    .segmented { display:flex; padding:3px; border:1px solid var(--line); border-radius:11px; background:#121620; }
+    .segmented .btn { min-width:38px; padding:6px 9px; border:0; background:transparent; }
+    .segmented .btn.active { background:#29331e; color:var(--accent); }
+    .stage { position:relative; overflow:hidden; cursor:pointer; }
+    .script-wrap { position:absolute; inset:0; overflow-y:auto; scrollbar-width:none; scroll-behavior:auto; }
+    .script-wrap::-webkit-scrollbar { display:none; }
+    .script { width:min(1080px, 84vw); margin:0 auto; padding:46vh 0 54vh; font-size:64px; line-height:1.42; font-weight:720; letter-spacing:-.035em; white-space:pre-wrap; text-align:center; text-wrap:pretty; }
+    .inline-edit .script { cursor:text; outline:1px dashed rgba(184,255,92,.45); outline-offset:20px; border-radius:8px; }
+    .inline-edit .script:focus { outline-color:var(--accent); }
+    .inline-edit .fade, .inline-edit .focus { pointer-events:none; opacity:.18; }
+    .focus { pointer-events:none; position:absolute; left:0; right:0; top:50%; height:1px; background:linear-gradient(90deg,transparent 4%,rgba(184,255,92,.7) 18%,rgba(184,255,92,.7) 82%,transparent 96%); box-shadow:0 0 28px rgba(184,255,92,.2); opacity:.6; }
+    .focus:before, .focus:after { content:""; position:absolute; top:-5px; width:8px; height:11px; background:var(--accent); border-radius:3px; }
+    .focus:before { left:3.2%; } .focus:after { right:3.2%; }
+    .fade { pointer-events:none; position:absolute; inset:0; background:linear-gradient(#080a0f 0,transparent 25%,transparent 75%,#080a0f 100%); }
+    .progress { position:absolute; left:0; right:0; bottom:0; height:4px; background:#1a1f29; z-index:5; }
+    .progress > div { height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+    .hint { position:absolute; right:22px; bottom:22px; color:#687080; font-size:12px; z-index:6; }
+    .countdown { position:fixed; inset:0; z-index:30; display:grid; place-items:center; background:rgba(8,10,15,.72); font-size:min(30vw,280px); font-weight:900; color:var(--accent); }
+    .countdown[hidden] { display:none; }
+    .mirror-x .script { transform:scaleX(-1); }
+    .mirror-y .script { transform:scaleY(-1); }
+    .paused .focus { opacity:.25; }
+    @media (max-width:1350px) { header { gap:10px; padding-inline:14px; } .label { display:none; } input[type=range] { width:82px; } }
+    @media (max-width:1050px) { header { height:auto; min-height:64px; flex-wrap:wrap; padding:12px; } .brand span:last-child { display:none; } .hint { display:none; } }
+    @media (max-width:850px) { input[type=range] { width:74px; } .script { width:88vw; font-size:48px; } }
+  </style>
+</head>
+<body class="paused">
+  <main class="app">
+    <header>
+      <div class="brand"><span class="mark">▶</span><span>FlowCue</span></div>
+      <div class="group"><span class="label">속도</span><input id="speed" aria-label="스크롤 속도 슬라이더" type="range" min="1" max="160" step="1" value="54"><input class="number-input" id="speedNumber" aria-label="스크롤 속도 숫자" type="number" min="1" max="160" step="1" value="54"></div>
+      <div class="group"><span class="label">글자</span><input id="fontSize" aria-label="글자 크기 슬라이더" type="range" min="28" max="110" step="1" value="64"><input class="number-input" id="fontNumber" aria-label="글자 크기 숫자" type="number" min="28" max="110" step="1" value="64"></div>
+      <div class="group"><span class="label">행간</span><input id="lineHeight" aria-label="행간 슬라이더" type="range" min="100" max="220" step="1" value="142"><input class="number-input" id="lineNumber" aria-label="행간 숫자" type="number" min="1" max="2.2" step="0.01" value="1.42"></div>
+      <div class="group"><span class="label">너비</span><input id="scriptWidth" aria-label="대본 너비 슬라이더" type="range" min="50" max="98" step="1" value="84"><input class="number-input" id="widthNumber" aria-label="대본 너비 숫자" type="number" min="50" max="98" step="1" value="84"></div>
+      <div class="segmented" aria-label="글자 정렬">
+        <button class="btn" id="alignLeft" title="왼쪽 정렬" aria-label="왼쪽 정렬" aria-pressed="false">좌</button>
+        <button class="btn active" id="alignCenter" title="가운데 정렬" aria-label="가운데 정렬" aria-pressed="true">중</button>
+      </div>
+      <button class="btn" id="mirrorX" title="좌우 반전">↔ 반전</button>
+      <button class="btn" id="inlineEditBtn">⌨ 대본</button>
+      <button class="btn" id="fullBtn" title="전체 화면">⛶</button>
+      <button class="btn primary" id="playBtn">시작</button>
+    </header>
+    <section class="stage" id="stage" aria-label="텔레프롬프터 화면">
+      <div class="script-wrap" id="scroller"><div class="script" id="script" contenteditable="false" spellcheck="false"></div></div>
+      <div class="fade"></div><div class="focus"></div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div class="hint">단축키 : Space 시작/정지 · ↑↓ 속도 · R 처음으로 · E 대본 편집</div>
+    </section>
+  </main>
+
+  <div class="countdown" id="countdown" hidden></div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const scroller=$('#scroller'), script=$('#script');
+    const speed=$('#speed'), speedNumber=$('#speedNumber'), fontSize=$('#fontSize'), fontNumber=$('#fontNumber'), lineHeight=$('#lineHeight'), lineNumber=$('#lineNumber'), scriptWidth=$('#scriptWidth'), widthNumber=$('#widthNumber'), playBtn=$('#playBtn');
+    const sample=`안녕하세요.\n\n지금부터 오늘의 이야기를 시작하겠습니다.\n\n이 화면은 카메라를 바라보면서도\n자연스럽게 대본을 읽을 수 있도록 만든\n간단한 텔레프롬프터입니다.\n\n상단에서 속도와 글자 크기를 조절하고,\n스페이스바를 눌러 시작하거나 잠시 멈출 수 있습니다.\n\n이제 ‘대본’ 버튼을 눌러\n여러분의 원고로 바꿔보세요.`;
+    let playing=false, last=0, raf=0, scrollPosition=0, countdownActive=false, inlineEditing=false;
+    let draft=(localStorage.getItem('flowcue-script') || sample).replaceAll('i상단에서 속도','상단에서 속도');
+    let settings={align:'center',lineHeight:1.42,width:84};
+    try { settings={...settings,...JSON.parse(localStorage.getItem('flowcue-settings')||'{}')}; } catch {}
+
+    function setScript(text){ draft=text.trim() || sample; script.textContent=draft; localStorage.setItem('flowcue-script',draft); reset(); }
+    function clamp(value,min,max){ return Math.min(max,Math.max(min,value)); }
+    function setSpeed(value){ const raw=Number(value); if(!Number.isFinite(raw)) return; const next=clamp(Math.round(raw),1,160); speed.value=next; speedNumber.value=next; }
+    function setFontSize(value){ const raw=Number(value); if(!Number.isFinite(raw)) return; const next=clamp(Math.round(raw),28,110); fontSize.value=next; fontNumber.value=next; script.style.fontSize=next+'px'; }
+    function setLineHeight(value){ const raw=Number(value); if(!Number.isFinite(raw)) return; const next=clamp(Math.round(raw*100)/100,1,2.2); settings.lineHeight=next; lineHeight.value=Math.round(next*100); lineNumber.value=next.toFixed(2); script.style.lineHeight=next; saveSettings(); }
+    function setScriptWidth(value){ const raw=Number(value); if(!Number.isFinite(raw)) return; const next=clamp(Math.round(raw),50,98); settings.width=next; scriptWidth.value=next; widthNumber.value=next; script.style.width=next+'vw'; saveSettings(); }
+    function bindNumber(field,setter,fallback){
+      let timer;
+      const apply=()=>{ clearTimeout(timer); field.value===''?setter(fallback()):setter(field.value); };
+      field.addEventListener('input',()=>{ clearTimeout(timer); if(field.value!=='') timer=setTimeout(()=>setter(field.value),350); });
+      field.addEventListener('change',apply);
+      field.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); apply(); field.blur(); } });
+    }
+    function saveSettings(){ localStorage.setItem('flowcue-settings',JSON.stringify(settings)); }
+    function setAlign(value){
+      settings.align=value; script.style.textAlign=value; saveSettings();
+      $('#alignLeft').classList.toggle('active',value==='left');
+      $('#alignCenter').classList.toggle('active',value==='center');
+      $('#alignLeft').setAttribute('aria-pressed',String(value==='left'));
+      $('#alignCenter').setAttribute('aria-pressed',String(value==='center'));
+    }
+    function setInlineEdit(on){
+      inlineEditing=on; pause();
+      script.contentEditable=String(on); document.body.classList.toggle('inline-edit',on);
+      $('#inlineEditBtn').classList.toggle('active',on);
+      $('#inlineEditBtn').textContent=on?'✓ 편집 완료':'⌨ 대본';
+      if(on){ script.focus(); }
+      else { draft=script.innerText.trim()||sample; script.textContent=draft; localStorage.setItem('flowcue-script',draft); script.blur(); }
+    }
+    function reset(){ playing=false; playBtn.textContent='시작'; document.body.classList.add('paused'); scrollPosition=0; scroller.scrollTop=0; updateProgress(); cancelAnimationFrame(raf); }
+    function updateProgress(){ const max=scroller.scrollHeight-scroller.clientHeight; $('#progressBar').style.width=(max ? scroller.scrollTop/max*100 : 0)+'%'; }
+    function loop(t){ if(!playing) return; if(!last) last=t; const dt=Math.min(40,t-last); last=t; scrollPosition += Number(speed.value)*dt/1000; scroller.scrollTop=scrollPosition; updateProgress(); if(scrollPosition >= scroller.scrollHeight-scroller.clientHeight-2) reset(); else raf=requestAnimationFrame(loop); }
+    function pause(){ playing=false; playBtn.textContent='계속'; document.body.classList.add('paused'); cancelAnimationFrame(raf); }
+    async function start(withCountdown=false){
+      if(countdownActive) return;
+      if(withCountdown && scroller.scrollTop<2){ countdownActive=true; const box=$('#countdown'); box.hidden=false; for(const n of [3,2,1]){ box.textContent=n; await new Promise(r=>setTimeout(r,650)); } box.hidden=true; countdownActive=false; }
+      scrollPosition=scroller.scrollTop; playing=true; last=0; playBtn.textContent='정지'; document.body.classList.remove('paused'); raf=requestAnimationFrame(loop);
+    }
+    function toggle(countdown=false){ playing ? pause() : start(countdown); }
+    playBtn.addEventListener('click',()=>toggle(true));
+    $('#stage').addEventListener('click',()=>{ if(!inlineEditing) toggle(false); });
+    $('#inlineEditBtn').addEventListener('click',()=>setInlineEdit(!inlineEditing));
+    speed.addEventListener('input',()=>setSpeed(speed.value));
+    fontSize.addEventListener('input',()=>setFontSize(fontSize.value));
+    lineHeight.addEventListener('input',()=>setLineHeight(Number(lineHeight.value)/100));
+    scriptWidth.addEventListener('input',()=>setScriptWidth(scriptWidth.value));
+    bindNumber(speedNumber,setSpeed,()=>speed.value);
+    bindNumber(fontNumber,setFontSize,()=>fontSize.value);
+    bindNumber(lineNumber,setLineHeight,()=>Number(lineHeight.value)/100);
+    bindNumber(widthNumber,setScriptWidth,()=>scriptWidth.value);
+    $('#alignLeft').addEventListener('click',()=>setAlign('left'));
+    $('#alignCenter').addEventListener('click',()=>setAlign('center'));
+    $('#mirrorX').addEventListener('click',e=>{ document.body.classList.toggle('mirror-x'); e.currentTarget.classList.toggle('active'); });
+    $('#fullBtn').addEventListener('click',()=>document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+    scroller.addEventListener('scroll',()=>{ if(!playing) scrollPosition=scroller.scrollTop; updateProgress(); },{passive:true});
+    script.addEventListener('input',()=>{ if(inlineEditing){ draft=script.innerText; localStorage.setItem('flowcue-script',draft); } });
+    document.addEventListener('keydown',e=>{
+      if(inlineEditing){ if(e.key==='Escape'||((e.ctrlKey||e.metaKey)&&e.key==='Enter')){ e.preventDefault(); setInlineEdit(false); } return; }
+      if(e.code==='Space'){ e.preventDefault(); toggle(false); }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); speed.value=Math.min(160,+speed.value+(e.shiftKey?5:1)); speed.dispatchEvent(new Event('input')); }
+      else if(e.key==='ArrowDown'){ e.preventDefault(); speed.value=Math.max(1,+speed.value-(e.shiftKey?5:1)); speed.dispatchEvent(new Event('input')); }
+      else if(e.key.toLowerCase()==='r') reset();
+      else if(e.key.toLowerCase()==='e') setInlineEdit(true);
+    });
+    setSpeed(speed.value); setFontSize(fontSize.value); setLineHeight(settings.lineHeight); setScriptWidth(settings.width);
+    setAlign(settings.align);
+    setScript(draft);
+  </script>
+</body>
+</html>
