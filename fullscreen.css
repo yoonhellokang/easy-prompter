@@ -1,0 +1,31 @@
+/* 전체 화면에서는 상단 조작부를 제외한 남은 높이를 대본 영역에 정확히 할당한다. */
+.prompter-app:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 0;
+  border-radius: 0;
+}
+
+.prompter-app:fullscreen .stage {
+  height: auto;
+  min-height: 0;
+}
+
+/* WebKit 계열 브라우저의 이전 전체 화면 선택자도 같은 레이아웃을 사용한다. */
+.prompter-app:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 0;
+  border-radius: 0;
+}
+
+.prompter-app:-webkit-full-screen .stage {
+  height: auto;
+  min-height: 0;
+}
