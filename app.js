@@ -170,9 +170,12 @@ document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' || ((event.ctrlKey || event.metaKey) && event.key === 'Enter')) setEditing(false);
     return;
   }
-  if (event.code === 'Space' && document.activeElement === document.body) {
-    event.preventDefault();
-    if (isPlaying) pausePrompter(); else startPrompter();
+  if (event.code === 'Space') {
+    const isFormInput = event.target.matches('input, textarea, select, [contenteditable="true"]');
+    if (!isFormInput) {
+      event.preventDefault();
+      if (isPlaying) pausePrompter(); else startPrompter();
+    }
   } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     event.preventDefault();
     const direction = event.key === 'ArrowUp' ? 1 : -1;
