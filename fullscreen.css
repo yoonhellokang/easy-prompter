@@ -1,4 +1,8 @@
 /* 전체 화면에서는 상단 조작부를 제외한 남은 높이를 대본 영역에 정확히 할당한다. */
+.script {
+  width: min(90%, 1400px);
+}
+
 .prompter-app:fullscreen {
   width: 100vw;
   height: 100vh;
@@ -28,4 +32,10 @@
 .prompter-app:-webkit-full-screen .stage {
   height: auto;
   min-height: 0;
+}
+
+@media (max-width: 520px) {
+  .script {
+    width: 94%;
+  }
 }
