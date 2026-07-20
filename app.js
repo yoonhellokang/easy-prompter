@@ -138,7 +138,10 @@ function setEditing(enabled) {
 async function toggleFullscreen() {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
-    else if (app.requestFullscreen) await app.requestFullscreen();
+    else if (app.requestFullscreen) {
+      await app.requestFullscreen();
+      select('#fullBtn').blur();
+    }
     else select('#status').textContent = '이 브라우저는 전체 화면을 지원하지 않습니다.';
   } catch {
     select('#status').textContent = '전체 화면을 시작할 수 없습니다.';
@@ -177,5 +180,8 @@ document.addEventListener('keydown', (event) => {
     applySettings();
     saveSettings();
   } else if (event.key.toLowerCase() === 'r') resetPrompter();
-  else if (event.key.toLowerCase() === 'e') setEditing(true);
+  else if (event.key.toLowerCase() === 'e') {
+    event.preventDefault();
+    setEditing(true);
+  }
 });
