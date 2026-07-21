@@ -8,6 +8,11 @@ const lineHeight = select('#lineHeight');
 const playButton = select('#playBtn');
 const sampleScript = `안녕하세요.\n\n지금부터 오늘의 이야기를 시작하겠습니다.\n\nEzprompter는 카메라를 바라보면서도\n자연스럽게 대본을 읽을 수 있도록 만든\n온라인 텔레프롬프터입니다.\n\n먼저 내 목소리에 맞춰 속도를 조절하고,\n글자 크기와 행간을 읽기 편하게 설정해 보세요.\n\n준비가 되었다면 시작 버튼을 누르고\n여러분의 이야기에 집중하세요.`;
 const englishSampleScript = `Hello.\n\nLet’s begin today’s story.\n\nEzprompter is an online teleprompter\nthat helps you read naturally\nwhile looking toward the camera.\n\nFirst, adjust the speed to match your voice,\nthen set the text size and line spacing\nfor comfortable reading.\n\nWhen you are ready, press Start\nand focus on telling your story.`;
+const chineseSampleScript = `你好。\n\n现在，让我们开始今天的故事。\n\nEzprompter 是一款在线提词器，\n帮助你在看着镜头的同时\n自然地朗读文稿。\n\n首先，根据自己的声音调节速度，\n再将字号和行距设置到\n舒适易读的程度。\n\n准备好后，请按下开始按钮，\n专注地讲述你的故事。`;
+const hindiSampleScript = `नमस्ते।\n\nआइए, आज की कहानी शुरू करें।\n\nEzprompter एक ऑनलाइन टेलीप्रॉम्प्टर है,\nजो कैमरे की ओर देखते हुए\nस्वाभाविक रूप से पढ़ने में मदद करता है।\n\nपहले अपनी आवाज़ के अनुसार गति तय करें,\nफिर अक्षर आकार और पंक्ति अंतर को\nपढ़ने में सहज बनाएँ।\n\nतैयार होने पर शुरू करें बटन दबाएँ\nऔर अपनी कहानी पर ध्यान दें।`;
+const japaneseSampleScript = `こんにちは。\n\nこれから今日のお話を始めましょう。\n\nEzprompterは、カメラを見ながら\n自然に原稿を読めるように作られた\nオンラインテレプロンプターです。\n\nまず声に合わせて速度を調整し、\n文字サイズと行間を\n読みやすく設定してください。\n\n準備ができたら開始ボタンを押して、\nあなたの話に集中しましょう。`;
+const portugueseSampleScript = `Olá.\n\nVamos começar a história de hoje.\n\nO Ezprompter é um teleprompter on-line\nque ajuda você a ler naturalmente\nenquanto olha para a câmera.\n\nPrimeiro, ajuste a velocidade à sua voz\ne defina o tamanho do texto e a entrelinha\npara uma leitura confortável.\n\nQuando estiver pronto, pressione Iniciar\ne concentre-se em contar sua história.`;
+const sampleScripts = { ko: sampleScript, en: englishSampleScript, 'zh-CN': chineseSampleScript, hi: hindiSampleScript, ja: japaneseSampleScript, 'pt-BR': portugueseSampleScript };
 const scriptStorageKey = 'mediprompter-script';
 const settingsStorageKey = 'mediprompter-settings';
 let isPlaying = false;
@@ -23,12 +28,12 @@ function translate(koreanText) {
 
 // 저장할 대본이 비어 있을 때 현재 언어에 맞는 기본 예문을 제공한다.
 function getDefaultSampleScript() {
-  return document.documentElement.lang === 'en' ? englishSampleScript : sampleScript;
+  return sampleScripts[document.documentElement.lang] || englishSampleScript;
 }
 
 // 저장된 대본이 사용자가 작성한 내용인지 언어별 기본 예문인지 구분한다.
 function isDefaultSampleScript(value) {
-  return value === sampleScript || value === englishSampleScript;
+  return Object.values(sampleScripts).includes(value);
 }
 
 // 사용자 대본은 보존하고, 비어 있거나 기본 예문인 경우에만 현재 언어의 예문을 반환한다.
