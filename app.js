@@ -207,6 +207,12 @@ document.addEventListener('ezprompter:languagechange', () => {
   }
 });
 
+// Space를 자체적으로 처리해야 하는 입력 요소인지 판별하되 범위 조절 바는 전역 재생 단축키를 허용한다.
+function handlesSpaceKeyDirectly(target) {
+  if (!(target instanceof Element)) return false;
+  return target.matches('textarea, select, button, [contenteditable="true"], input:not([type="range"])');
+}
+
 // 편집 중에는 입력을 보호하고 평상시에는 핵심 단축키를 처리한다.
 document.addEventListener('keydown', (event) => {
   if (isEditing) {
@@ -214,8 +220,7 @@ document.addEventListener('keydown', (event) => {
     return;
   }
   if (event.code === 'Space') {
-    const isFormInput = event.target.matches('input, textarea, select, [contenteditable="true"]');
-    if (!isFormInput) {
+    if (!handlesSpaceKeyDirectly(event.target)) {
       event.preventDefault();
       if (isPlaying) pausePrompter(); else startPrompter();
     }
