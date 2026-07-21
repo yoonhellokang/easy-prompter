@@ -7,6 +7,7 @@ const fontSize = select('#fontSize');
 const lineHeight = select('#lineHeight');
 const playButton = select('#playBtn');
 const sampleScript = `안녕하세요.\n\n지금부터 오늘의 이야기를 시작하겠습니다.\n\nEzprompter는 카메라를 바라보면서도\n자연스럽게 대본을 읽을 수 있도록 만든\n온라인 텔레프롬프터입니다.\n\n먼저 내 목소리에 맞춰 속도를 조절하고,\n글자 크기와 행간을 읽기 편하게 설정해 보세요.\n\n준비가 되었다면 시작 버튼을 누르고\n여러분의 이야기에 집중하세요.`;
+const englishSampleScript = `Hello.\n\nLet’s begin today’s story.\n\nEzprompter is an online teleprompter\nthat helps you read naturally\nwhile looking toward the camera.\n\nFirst, adjust the speed to match your voice,\nthen set the text size and line spacing\nfor comfortable reading.\n\nWhen you are ready, press Start\nand focus on telling your story.`;
 const scriptStorageKey = 'mediprompter-script';
 const settingsStorageKey = 'mediprompter-settings';
 let isPlaying = false;
@@ -14,6 +15,16 @@ let isEditing = false;
 let animationFrame = 0;
 let previousTime = 0;
 let scrollPosition = 0;
+
+// 현재 사이트 언어에 맞는 UI 문구를 반환하며 번역 모듈이 없으면 한국어를 사용한다.
+function translate(koreanText) {
+  return window.EzI18n ? window.EzI18n.text(koreanText) : koreanText;
+}
+
+// 저장할 대본이 비어 있을 때 현재 언어에 맞는 기본 예문을 제공한다.
+function getDefaultSampleScript() {
+  return document.documentElement.lang === 'en' ? englishSampleScript : sampleScript;
+}
 
 // 저장소 접근이 차단된 브라우저에서도 앱이 중단되지 않도록 값을 안전하게 읽는다.
 function readStorage(key) {
@@ -24,7 +35,7 @@ function readStorage(key) {
 // 저장소 접근이 허용된 경우에만 값을 기록하고 실패 시 현재 세션 동작은 유지한다.
 function writeStorage(key, value) {
   try { localStorage.setItem(key, value); }
-  catch { select('#status').textContent = '브라우저 설정으로 인해 대본을 저장하지 못했습니다.'; }
+  catch { select('#status').textContent = translate('브라우저 설정으로 인해 대본을 저장하지 못했습니다.'); }
 }
 
 // localStorage 값이 손상되었을 때도 기본 설정으로 실행되도록 저장값을 안전하게 읽는다.
@@ -80,8 +91,8 @@ function updateProgress() {
 function pausePrompter() {
   isPlaying = false;
   cancelAnimationFrame(animationFrame);
-  playButton.textContent = scroller.scrollTop > 0 ? '계속' : '시작';
-  select('#status').textContent = '재생 일시 정지';
+  playButton.textContent = translate(scroller.scrollTop > 0 ? '계속' : '시작');
+  select('#status').textContent = translate('재생 일시 정지');
 }
 
 // 현재 위치에서 자동 스크롤을 시작한다.
@@ -90,8 +101,8 @@ function startPrompter() {
   isPlaying = true;
   previousTime = 0;
   scrollPosition = scroller.scrollTop;
-  playButton.textContent = '정지';
-  select('#status').textContent = '대본 재생 중';
+  playButton.textContent = translate('정지');
+  select('#status').textContent = translate('대본 재생 중');
   animationFrame = requestAnimationFrame(runAnimation);
 }
 
@@ -113,8 +124,8 @@ function resetPrompter() {
   pausePrompter();
   scroller.scrollTop = 0;
   scrollPosition = 0;
-  playButton.textContent = '시작';
-  select('#status').textContent = '대본 처음으로 이동';
+  playButton.textContent = translate('시작');
+  select('#status').textContent = translate('대본 처음으로 이동');
   updateProgress();
 }
 
@@ -124,10 +135,10 @@ function setEditing(enabled) {
   pausePrompter();
   script.contentEditable = String(enabled);
   select('#editBtn').setAttribute('aria-pressed', String(enabled));
-  select('#editBtn').textContent = enabled ? '편집 완료' : '대본 편집';
+  select('#editBtn').textContent = translate(enabled ? '편집 완료' : '대본 편집');
   if (enabled) script.focus();
   else {
-    const savedScript = script.innerText.trim() || sampleScript;
+    const savedScript = script.innerText.trim() || getDefaultSampleScript();
     script.textContent = savedScript;
     writeStorage(scriptStorageKey, savedScript);
     script.blur();
@@ -142,14 +153,14 @@ async function toggleFullscreen() {
       await app.requestFullscreen();
       select('#fullBtn').blur();
     }
-    else select('#status').textContent = '이 브라우저는 전체 화면을 지원하지 않습니다.';
+    else select('#status').textContent = translate('이 브라우저는 전체 화면을 지원하지 않습니다.');
   } catch {
-    select('#status').textContent = '전체 화면을 시작할 수 없습니다.';
+    select('#status').textContent = translate('전체 화면을 시작할 수 없습니다.');
   }
 }
 
 const settings = loadSettings();
-script.textContent = readStorage(scriptStorageKey) || sampleScript;
+script.textContent = readStorage(scriptStorageKey) || getDefaultSampleScript();
 applySettings();
 updateProgress();
 
@@ -163,6 +174,18 @@ select('#mirrorBtn').addEventListener('click', () => { settings.mirror = !settin
 select('#fullBtn').addEventListener('click', toggleFullscreen);
 scroller.addEventListener('scroll', () => { if (!isPlaying) scrollPosition = scroller.scrollTop; updateProgress(); }, { passive: true });
 script.addEventListener('input', () => { if (isEditing) writeStorage(scriptStorageKey, script.innerText); });
+
+// 언어가 바뀌면 현재 재생 상태의 동적 버튼과 상태 문구도 함께 갱신한다.
+document.addEventListener('ezprompter:languagechange', () => {
+  select('#editBtn').textContent = translate(isEditing ? '편집 완료' : '대본 편집');
+  if (isPlaying) {
+    playButton.textContent = translate('정지');
+    select('#status').textContent = translate('대본 재생 중');
+  } else {
+    playButton.textContent = translate(scroller.scrollTop > 0 ? '계속' : '시작');
+    select('#status').textContent = translate('재생 일시 정지');
+  }
+});
 
 // 편집 중에는 입력을 보호하고 평상시에는 핵심 단축키를 처리한다.
 document.addEventListener('keydown', (event) => {
