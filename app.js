@@ -26,6 +26,17 @@ function getDefaultSampleScript() {
   return document.documentElement.lang === 'en' ? englishSampleScript : sampleScript;
 }
 
+// 저장된 대본이 사용자가 작성한 내용인지 언어별 기본 예문인지 구분한다.
+function isDefaultSampleScript(value) {
+  return value === sampleScript || value === englishSampleScript;
+}
+
+// 사용자 대본은 보존하고, 비어 있거나 기본 예문인 경우에만 현재 언어의 예문을 반환한다.
+function loadScriptForCurrentLanguage() {
+  const savedScript = readStorage(scriptStorageKey);
+  return !savedScript || isDefaultSampleScript(savedScript) ? getDefaultSampleScript() : savedScript;
+}
+
 // 저장소 접근이 차단된 브라우저에서도 앱이 중단되지 않도록 값을 안전하게 읽는다.
 function readStorage(key) {
   try { return localStorage.getItem(key); }
@@ -160,7 +171,7 @@ async function toggleFullscreen() {
 }
 
 const settings = loadSettings();
-script.textContent = readStorage(scriptStorageKey) || getDefaultSampleScript();
+script.textContent = loadScriptForCurrentLanguage();
 applySettings();
 updateProgress();
 
@@ -177,6 +188,10 @@ script.addEventListener('input', () => { if (isEditing) writeStorage(scriptStora
 
 // 언어가 바뀌면 현재 재생 상태의 동적 버튼과 상태 문구도 함께 갱신한다.
 document.addEventListener('ezprompter:languagechange', () => {
+  if (isDefaultSampleScript(script.innerText.trim())) {
+    script.textContent = getDefaultSampleScript();
+    resetPrompter();
+  }
   select('#editBtn').textContent = translate(isEditing ? '편집 완료' : '대본 편집');
   if (isPlaying) {
     playButton.textContent = translate('정지');
